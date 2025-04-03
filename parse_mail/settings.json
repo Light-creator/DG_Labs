@@ -1,9 +1,17 @@
 {
-  "headers": [
-    "get_mail": {
+  "session": "qwe",
+  "headers": {
+    "get_conversations": {
       "X-Owa-Urlpostdata": "%7B%22__type%22%3A%22FindConversationJsonRequest%3A%23Exchange%22%2C%22Header%22%3A%7B%22__type%22%3A%22JsonRequestHeaders%3A%23Exchange%22%2C%22RequestServerVersion%22%3A%22V2016_02_03%22%2C%22TimeZoneContext%22%3A%7B%22__type%22%3A%22TimeZoneContext%3A%23Exchange%22%2C%22TimeZoneDefinition%22%3A%7B%22__type%22%3A%22TimeZoneDefinitionType%3A%23Exchange%22%2C%22Id%22%3A%22Russian%20Standard%20Time%22%7D%7D%7D%2C%22Body%22%3A%7B%22__type%22%3A%22FindConversationRequest%3A%23Exchange%22%2C%22ParentFolderId%22%3A%7B%22__type%22%3A%22TargetFolderId%3A%23Exchange%22%2C%22BaseFolderId%22%3A%7B%22__type%22%3A%22DistinguishedFolderId%3A%23Exchange%22%2C%22Id%22%3A%22inbox%22%7D%7D%2C%22ConversationShape%22%3A%7B%22__type%22%3A%22ConversationResponseShape%3A%23Exchange%22%2C%22BaseShape%22%3A%22IdOnly%22%7D%2C%22ShapeName%22%3A%22ConversationListView%22%2C%22Paging%22%3A%7B%22__type%22%3A%22IndexedPageView%3A%23Exchange%22%2C%22BasePoint%22%3A%22Beginning%22%2C%22Offset%22%3A0%2C%22MaxEntriesReturned%22%3A500%7D%2C%22ViewFilter%22%3A%22All%22%2C%22FocusedViewFilter%22%3A-1%2C%22SortOrder%22%3A%5B%7B%22__type%22%3A%22SortResults%3A%23Exchange%22%2C%22Order%22%3A%22Descending%22%2C%22Path%22%3A%7B%22__type%22%3A%22PropertyUri%3A%23Exchange%22%2C%22FieldURI%22%3A%22ConversationLastDeliveryOrRenewTime%22%7D%7D%2C%7B%22__type%22%3A%22SortResults%3A%23Exchange%22%2C%22Order%22%3A%22Descending%22%2C%22Path%22%3A%7B%22__type%22%3A%22PropertyUri%3A%23Exchange%22%2C%22FieldURI%22%3A%22ConversationLastDeliveryTime%22%7D%7D%5D%7D%7D", 
       "Action": "FindConversation"
-    }
-  ],
-  "session": ""
+    },
+    "get_conversation_by_id": {
+      "X-Owa-Urlpostdata": "%7B%22__type%22%3A%22GetConversationItemsJsonRequest%3A%23Exchange%22%2C%22Header%22%3A%7B%22__type%22%3A%22JsonRequestHeaders%3A%23Exchange%22%2C%22RequestServerVersion%22%3A%22V2017_08_18%22%2C%22TimeZoneContext%22%3A%7B%22__type%22%3A%22TimeZoneContext%3A%23Exchange%22%2C%22TimeZoneDefinition%22%3A%7B%22__type%22%3A%22TimeZoneDefinitionType%3A%23Exchange%22%2C%22Id%22%3A%22Russian%20Standard%20Time%22%7D%7D%7D%2C%22Body%22%3A%7B%22__type%22%3A%22GetConversationItemsRequest%3A%23Exchange%22%2C%22Conversations%22%3A%5B%7B%22__type%22%3A%22ConversationRequestType%3A%23Exchange%22%2C%22ConversationId%22%3A%7B%22__type%22%3A%22ItemId%3A%23Exchange%22%2C%22Id%22%3A%22AAQkAGEwNWNlMWE1LTY1NmEtNDE1ZS1iZDc3LTZiYTg3YTQ0NTUzYgAQALlOP%2FSF1sVLjKSQF1rgtxE%3D%22%7D%2C%22SyncState%22%3A%22%22%7D%5D%2C%22ItemShape%22%3A%7B%22__type%22%3A%22ItemResponseShape%3A%23Exchange%22%2C%22BaseShape%22%3A%22IdOnly%22%2C%22FilterHtmlContent%22%3Atrue%2C%22BlockExternalImagesIfSenderUntrusted%22%3Atrue%2C%22BlockContentFromUnknownSenders%22%3Afalse%2C%22AddBlankTargetToLinks%22%3Atrue%2C%22ClientSupportsIrm%22%3Atrue%2C%22InlineImageUrlTemplate%22%3A%22data%3Aimage%2Fgif%3Bbase64%2CR0lGODlhAQABAIAAAAAAAP%2F%2F%2FyH5BAEAAAEALAAAAAABAAEAAAIBTAA7%22%2C%22FilterInlineSafetyTips%22%3Atrue%2C%22MaximumBodySize%22%3A2097152%2C%22MaximumRecipientsToReturn%22%3A20%2C%22CssScopeClassName%22%3A%22rps_c8c3%22%2C%22InlineImageUrlOnLoadTemplate%22%3A%22InlineImageLoader.GetLoader().Load(this)%22%2C%22InlineImageCustomDataTemplate%22%3A%22%7Bid%7D%22%2C%22ExcludeBindForInlineAttachments%22%3Atrue%2C%22CalculateOnlyFirstBody%22%3Atrue%7D%2C%22ShapeName%22%3A%22ItemPart%22%2C%22SortOrder%22%3A%22DateOrderAscending%22%2C%22MaxItemsToReturn%22%3A20%2C%22FoldersToIgnore%22%3A%5B%7B%22__type%22%3A%22FolderId%3A%23Exchange%22%2C%22ChangeKey%22%3A%22AQAAAA%3D%3D%22%2C%22Id%22%3A%22AAMkAGEwNWNlMWE1LTY1NmEtNDE1ZS1iZDc3LTZiYTg3YTQ0NTUzYgAuAAAAAABSe16WcXHBQo4fGWg2kUWeAQB%2FriO8yLrNTI4cQWLmMNsoAAAAAAELAAA%3D%22%7D%5D%7D%7D"
+    },
+    "Action": "GetConversationItems"
+  },
+  "urls": {
+    "get_conversations": "https://mail.spbstu.ru/owa/service.svc?action=FindConversation",
+    "get_conversation_by_id": "https://mail.spbstu.ru/owa/service.svc?action=GetConversationItems"
+  }
 }
