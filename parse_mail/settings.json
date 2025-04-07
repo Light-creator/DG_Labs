@@ -1,5 +1,8 @@
 {
-  "session": "qwe",
+  "session": {
+    "Cookie":"",
+    "X-Owa-Canary": ""
+  },
   "headers": {
     "get_conversations": {
       "X-Owa-Urlpostdata": "%7B%22__type%22%3A%22FindConversationJsonRequest%3A%23Exchange%22%2C%22Header%22%3A%7B%22__type%22%3A%22JsonRequestHeaders%3A%23Exchange%22%2C%22RequestServerVersion%22%3A%22V2016_02_03%22%2C%22TimeZoneContext%22%3A%7B%22__type%22%3A%22TimeZoneContext%3A%23Exchange%22%2C%22TimeZoneDefinition%22%3A%7B%22__type%22%3A%22TimeZoneDefinitionType%3A%23Exchange%22%2C%22Id%22%3A%22Russian%20Standard%20Time%22%7D%7D%7D%2C%22Body%22%3A%7B%22__type%22%3A%22FindConversationRequest%3A%23Exchange%22%2C%22ParentFolderId%22%3A%7B%22__type%22%3A%22TargetFolderId%3A%23Exchange%22%2C%22BaseFolderId%22%3A%7B%22__type%22%3A%22DistinguishedFolderId%3A%23Exchange%22%2C%22Id%22%3A%22inbox%22%7D%7D%2C%22ConversationShape%22%3A%7B%22__type%22%3A%22ConversationResponseShape%3A%23Exchange%22%2C%22BaseShape%22%3A%22IdOnly%22%7D%2C%22ShapeName%22%3A%22ConversationListView%22%2C%22Paging%22%3A%7B%22__type%22%3A%22IndexedPageView%3A%23Exchange%22%2C%22BasePoint%22%3A%22Beginning%22%2C%22Offset%22%3A0%2C%22MaxEntriesReturned%22%3A500%7D%2C%22ViewFilter%22%3A%22All%22%2C%22FocusedViewFilter%22%3A-1%2C%22SortOrder%22%3A%5B%7B%22__type%22%3A%22SortResults%3A%23Exchange%22%2C%22Order%22%3A%22Descending%22%2C%22Path%22%3A%7B%22__type%22%3A%22PropertyUri%3A%23Exchange%22%2C%22FieldURI%22%3A%22ConversationLastDeliveryOrRenewTime%22%7D%7D%2C%7B%22__type%22%3A%22SortResults%3A%23Exchange%22%2C%22Order%22%3A%22Descending%22%2C%22Path%22%3A%7B%22__type%22%3A%22PropertyUri%3A%23Exchange%22%2C%22FieldURI%22%3A%22ConversationLastDeliveryTime%22%7D%7D%5D%7D%7D", 
@@ -13,5 +16,6 @@
   "urls": {
     "get_conversations": "https://mail.spbstu.ru/owa/service.svc?action=FindConversation",
     "get_conversation_by_id": "https://mail.spbstu.ru/owa/service.svc?action=GetConversationItems"
-  }
+  },
+  "post_req_conversation_by_id": {"__type":"GetConversationItemsJsonRequest:#Exchange","Header":{"__type":"JsonRequestHeaders:#Exchange","RequestServerVersion":"V2017_08_18","TimeZoneContext":{"__type":"TimeZoneContext:#Exchange","TimeZoneDefinition":{"__type":"TimeZoneDefinitionType:#Exchange","Id":"Russian Standard Time"}}},"Body":{"__type":"GetConversationItemsRequest:#Exchange","Conversations":[{"__type":"ConversationRequestType:#Exchange","ConversationId":{"__type":"ItemId:#Exchange","Id":"AAQkAGEwNWNlMWE1LTY1NmEtNDE1ZS1iZDc3LTZiYTg3YTQ0NTUzYgAQAJIjbP/2uy1LgLsZPHz572w="},"SyncState":""}],"ItemShape":{"__type":"ItemResponseShape:#Exchange","BaseShape":"IdOnly","FilterHtmlContent":true,"BlockExternalImagesIfSenderUntrusted":true,"BlockContentFromUnknownSenders":false,"AddBlankTargetToLinks":true,"ClientSupportsIrm":true,"InlineImageUrlTemplate":"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAEALAAAAAABAAEAAAIBTAA7","FilterInlineSafetyTips":true,"MaximumBodySize":2097152,"MaximumRecipientsToReturn":20,"CssScopeClassName":"rps_18b8","InlineImageUrlOnLoadTemplate":"InlineImageLoader.GetLoader().Load(this)","InlineImageCustomDataTemplate":"{id}","ExcludeBindForInlineAttachments":true,"CalculateOnlyFirstBody":true},"ShapeName":"ItemPart","SortOrder":"DateOrderAscending","MaxItemsToReturn":20,"FoldersToIgnore":[{"__type":"FolderId:#Exchange","ChangeKey":"AQAAAA==","Id":"AAMkAGEwNWNlMWE1LTY1NmEtNDE1ZS1iZDc3LTZiYTg3YTQ0NTUzYgAuAAAAAABSe16WcXHBQo4fGWg2kUWeAQB/riO8yLrNTI4cQWLmMNsoAAAAAAELAAA="}]}}
 }
