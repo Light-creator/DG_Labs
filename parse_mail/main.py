@@ -2,6 +2,7 @@ import requests
 import json
 import argparse
 
+from datetime import datetime
 from urllib.parse import unquote, quote, urlencode
 
 
@@ -13,12 +14,13 @@ class Mailer:
         self.get_mail_by_id_postdata = None
 
         self.mails = None
+        self.extended_mails = None
 
         self.load_settings()
         self.load_headers()
 
     def load_settings(self) -> None:
-        with open(self.settings_file, "r") as f:
+        with open(self.settings_file, "r", encoding="utf-8") as f:
             self.settings = json.load(f, strict=False)
 
     def load_headers(self) -> None:
@@ -33,28 +35,56 @@ class Mailer:
 
             res = self.session.post(self.settings["urls"]["get_conversations"])
             self.mails = json.loads(res.text)
-        except JSONDecodeError as err:
-            raise JSONDecodeError(f"Failed to parse mails")
+        except:
+            raise Exception(f"Failed to parse mails")
     
+    def get_all_extended_mails(self) -> None:
+        try:
+            self.session.headers.clear()
+            self.session.headers.update(self.settings["session"])
+        
+            post_data = self.settings["post_req_conversation_by_id"]
+            post_data["Body"]["Conversations"] = []
+
+            for mail in self.mails["Body"]["Conversations"]:
+                add_coversation = {
+                    "__type":"ConversationRequestType:#Exchange",
+                    "ConversationId": {
+                    "__type":
+                    "ItemId:#Exchange",
+                    "Id": mail["ConversationId"]["Id"]
+                    },
+                    "SyncState":""
+                }
+                post_data["Body"]["Conversations"] += [add_coversation]
+            
+            self.session.headers.update({"X-Owa-Urlpostdata": quote(json.dumps(post_data))})
+            self.session.headers.update({"Action": "GetConversationItems"})
+
+            res = self.session.post(self.settings["urls"]["get_conversation_by_id"])
+            self.extended_mails = json.loads(res.text)
+        except Exception as err:
+            print("Failed to load attachments!", err)
+            return None
+
     def print_mail(self, mail, extended_mail):
         print("-----------------------")
         print(f"Author: {mail['UniqueSenders']}")
         print(f"Topic: {mail['ConversationTopic']}")
         print(f"DateTime: {mail['LastDeliveryTime']}")
-        if extended_mail == None: print(f"This mail does not have list of attachments")
+        if not mail["HasAttachments"] or extended_mail == None: 
+            print(f"This mail does not have list of attachments")
         else: 
             print(f"List of attachments:")
-            items = extended_mail['Body']['ResponseMessages']['Items']
-            attachments = items[0]['Conversation']['ConversationNodes'][0]['Items'][0]['Attachments']
+            attachments = extended_mail['Attachments']
             for idx, attachment in enumerate(attachments):
-                print(f"{idx}: {attachment['Name']} - {attachment['ContentType']}")
+                print(f"    {idx+1}: {attachment['Name']} - {attachment['ContentType']}")
         print(f"Preview: {mail['Preview']}")
         print("-----------------------\n")
     
     def get_extended_mail(self, mail):
         try:
             self.session.headers.clear()
-        
             self.session.headers.update(self.settings["session"])
         
             post_data = self.settings["post_req_conversation_by_id"]
@@ -64,25 +94,73 @@ class Mailer:
 
             res = self.session.post(self.settings["urls"]["get_conversation_by_id"])
             res_json = json.loads(res.text)
-            return res_json
-        except JSONDecodeError as err:
+            items = res_json['Body']['ResponseMessages']['Items']
+            res_mail = items[0]['Conversation']['ConversationNodes'][0]['Items'][0]
+            return res_mail
+        except Exception as err:
             print("Failed to load attachments!")
             return None
+    
+    def is_filtered(self, args, mail, extended_mail=None) -> bool:
+        if args.author != None: 
+            for sender in mail["UniqueSenders"]:
+                if args.author in sender: return True
+        elif args.topic != None: return args.topic in mail["ConversationTopic"]
+        elif args.date != None:
+            date = datetime.strptime(mail["LastDeliveryTime"], "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
+            filter_date = datetime.strptime(args.date, "%d.%m.%Y-%H")
+            if date.date() == filter_date.date() and date.hour == filter_date.hour: return True
+        elif args.body != None:
+            if extended_mail != None: return args.body in extended_mail["UniqueBody"]["Value"]
+            else: return args.body in mail["Preview"]
+            
+        return False
 
-
-    def get_mails_with_author_filter(self, author: str) -> None:
+    def get_mails_with_filter(self, args) -> None:
         self.get_all_mails()
 
         for mail in self.mails["Body"]["Conversations"]:
-            for sender in mail["UniqueSenders"]:
-                if author in sender: 
-                    extended_mail = None
-                    if mail["HasAttachments"]: extended_mail = self.get_extended_mail(mail)
-                    self.print_mail(mail, extended_mail)
+            extended_mail = None
+            if args.body != None or mail["HasAttachments"]:
+                extended_mail = self.get_extended_mail(mail)
+            if self.is_filtered(args, mail, extended_mail): 
+                self.print_mail(mail, extended_mail)
+
+    def send_mail(self, args):
+        try:
+            self.session.headers.clear()
+            self.session.headers.update(self.settings["session"])
+            self.session.headers.update({"Action": "UpdateItem"})
+        
+            post_data = self.settings["post_send_mail"]
+            
+            post_data["Body"]["ItemChanges"][0]["Updates"][0]["Item"]["ToRecipients"] = []
+            for receiver in args.receivers.split(','):
+                post_data["Body"]["ItemChanges"][0]["Updates"][0]["Item"]["ToRecipients"] += [{
+                  "Name": "",
+                  "EmailAddress": receiver,
+                  "RoutingType": "SMTP",
+                  "MailboxType": "Mailbox",
+                  "RelevanceScore": 8,
+                  "SipUri": " "
+                }]
+
+            post_data["Body"]["ItemChanges"][0]["Updates"][1]["Item"]["Subject"] = args.topic
+            post_data["Body"]["ItemChanges"][0]["Updates"][2]["Item"]["Body"]["Value"] = f"</p>{args.body}</p>"
+            
+            res = self.session.post(self.settings["urls"]["send_mail"], json=post_data)
+            print(f"{res} {res.text}")
+        except Exception as err:
+            raise Exception("Failed to send mail", err)
 
 
 def helper(args, mailer: Mailer) -> None:
-    mailer.get_mails_with_author_filter(args.author)
+    if args.operation == "get":
+        mailer.get_mails_with_filter(args)
+    elif args.operation == "send":
+        mailer.send_mail(args)
+    else:
+        raise Exception(f"Unknown operation {args.operation}")
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -91,13 +169,25 @@ def main() -> None:
     parser.add_argument("settings_file", type=str, help="File with settings (json format)")
     
     parser.add_argument("-t", "--topic", type=str, help="Filter for mail by topic")
-    parser.add_argument("-d", "--date", type=str, help="Filter for mail by date")
+    parser.add_argument("-d", "--date", type=str, help="Filter for mail by date [dd.mm.yyyy-hh]")
     parser.add_argument("-a", "--author", type=str, help="Filter for mail by author")
     parser.add_argument("-b", "--body", type=str, help="Filter for mail by body text")
+    parser.add_argument("-r", "--receivers", type=str, help="List of Receivers")
     
     args = parser.parse_args()
 
     mailer = Mailer(args.settings_file)
+
+
+    if args.operation == "get" and not args.topic and not args.author and not args.body:
+        raise Exception("Filter parameter should be not None for get operation")
+    if args.operation == "send":
+        if not args.body:
+            raise Exception("Body argument is required")
+        if not args.receivers:
+            raise Exception("Receivers argument is required")
+        if not args.topic:
+            raise Exception("Topic argument is required")
     
     helper(args, mailer)
     
