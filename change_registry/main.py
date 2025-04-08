@@ -31,14 +31,31 @@ def read_file(file_name: str) -> None:
 def copy_file(file_name: str, new_file_path: str) -> None:
     try:
         shutil.copyfile(file_name, new_file_path)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File {file_name} not found")
+    except shutil.SameFileError:
+        raise shutil.SameFileError(f"Files names should be different")
+    except OSError as err:
+        raise OSError(f"File {new_file_path} already exists")
 
 def rename_file(file_name: str, new_file_name: str) -> None:
     try:
         os.rename(file_name,  new_file_name)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File {file_name} not found")
+    except FileExistsError:
+        raise FileNotFoundError(f"File {new_file_name} already exists")
+    except IsADirectoryError:
+        raise IsADirectoryError(f"File {new_file_name} is a directory")
+
+def search_str(path: str, value: str) -> None:
+    try:
+        walker = os.walk(path)
+        for (dirpath, dirnames, filenames) in walker:
+            for file_name in filenames:
+                file_path = os.path.join(dirpath, file_name)
+                with open(file_path, "r", encoding="cp1252", errors="ignore") as f:
+                    if value in f.read(): 
+                        print(f"Value {value} was found in {file_path}")
+    except OSError as err:
+        raise("Invalid or inaccessible file names and paths")
+
 
 def file_helper(args: argparse.Namespace) -> None:
     if args.operation == "write":
@@ -53,38 +70,70 @@ def file_helper(args: argparse.Namespace) -> None:
         read_file(args.name)
     elif args.operation == "rename":
         rename_file(args.name, args.dst)
+    elif args.operation == "search":
+        search_str(args.dst, args.value)
     else:
         raise Exception(f"Unknown file operation: {args.operation}")
 
 # Reg section
-def create_key(section: int, location_name: str, key_name: str) -> None:
+def create_key(location, key_name: str) -> None:
     try:
-        location = winreg.OpenKeyEx(section, location_name, 0, winreg.KEY_ALL_ACCESS)
         key = winreg.CreateKeyEx(location, key_name, 0, winreg.KEY_ALL_ACCESS)
         winreg.CloseKey(key)
         winreg.CloseKey(location)
-    except PermissionError:
-        raise PermissionError(f"Failed to create key {location_name}\\{key_name}: Permission denied")
+    except OSError:
+        raise OSError(f"Failed to create key {location_name}\\{key_name}")
 
 
-def delete_key(section: int, location_name: str, key_name: str) -> None:
+def delete_key(location, key_name: str) -> None:
     try:
-        location = winreg.OpenKeyEx(section, location_name, 0, winreg.KEY_ALL_ACCESS)
         winreg.DeleteKeyEx(location, key_name)
         winreg.CloseKey(location)
-    except PermissionError:
-        raise PermissionError(f"Failed to delete key {location_name}\\{key_name}: Permission denied")
+    except OSError:
+        raise OSError(f"Failed to delete key {location_name}\\{key_name}")
 
-def set_value(section: int, location_name: str, key_name: str, value_name: str, value: str) -> None:
+def set_value(location, key_name: str, value_name: str, value: str) -> None:
     try:
-        location = winreg.OpenKeyEx(section, location_name, 0, winreg.KEY_ALL_ACCESS)
         key = winreg.OpenKeyEx(location, key_name, 0, winreg.KEY_ALL_ACCESS)
         winreg.SetValueEx(key, value_name, 0, winreg.REG_SZ, value)
         winreg.CloseKey(key)
         winreg.CloseKey(location)
-    except PermissionError:
-        raise PermissionError(f"Failed to set value key {location_name}\\{key_name} -> {value_name}={value}: Permission denied")
+    except OSError:
+        raise OSError(f"Failed to set value key {location_name}\\{key_name} -> {value_name}={value}")
 
+def enumerate_key_values(key, searched_value: str, location: str):
+    idx = 0
+    while True:
+        try:
+            value_name, value, value_type = winreg.EnumValue(key, idx)
+            if value_type == winreg.REG_SZ and searched_value == value:
+                print(f"Value {searched_value} was found in {location}: {value_name}")
+            idx += 1
+        except OSError as err:
+            # No More Values
+            return None
+
+def search_reg_value(section: int, location: str, value: str, max_level: int, level: int):
+    if level >= max_level: return None
+    try:
+        with winreg.OpenKeyEx(section, location, 0, winreg.KEY_READ) as key:
+            enumerate_key_values(key, value, location)
+            idx = 0
+            while True:
+                try:
+                    subkey = winreg.EnumKey(key, idx)
+                
+                    if len(location) > 0: subkey_path = f"{location}\\{subkey}"
+                    else: subkey_path = subkey
+
+                    search_reg_value(section, subkey_path, value, max_level, level+1)
+            
+                    idx += 1
+                except OSError as err:
+                    break
+    except OSError as err:
+        # Failed to get handle
+        return None
 
 def reg_helper(args: argparse.Namespace) -> None:
     section = winreg.HKEY_CLASSES_ROOT
@@ -100,13 +149,24 @@ def reg_helper(args: argparse.Namespace) -> None:
         section = winreg.HKEY_CURRENT_CONFIG
     else:
         raise Exception(f"Unknown registry section type: {args.section}")
+    
+    if args.operation == "search":
+        search_reg_value(section, "", args.value, 5, 0)
+        return
+    
+    location = None
+    try:
+        location = winreg.OpenKeyEx(section, args.location, 0, winreg.KEY_ALL_ACCESS)
+    except OSError:
+        raise OSError(f"Failed to get handle of {args.location}")
+
 
     if args.operation == 'create':
-        create_key(section, args.location, args.name)
+        create_key(location, args.name)
     elif args.operation == 'set':
-        set_value(section, args.location, args.name, args.value_name, args.value)
+        set_value(location, args.name, args.value_name, args.value)
     elif args.operation == 'delete':
-        delete_key(section, args.location, args.name)
+        delete_key(location, args.name)
     else:
         raise Exception(f"Unknown operation for registry: {args.operation}")
 
@@ -137,8 +197,6 @@ def main() -> None:
         raise Exception("Operation argument is required")
 
     if args.operation_type == "file":
-        if not args.name:
-            raise Exception("Name argument is required for file operation type")
         if args.operation == "write" and not args.value:
             raise Exception("Value argument is required for write file operation")
         if args.operation == "copy" and not args.dst:
@@ -147,10 +205,6 @@ def main() -> None:
             raise Exception("Dst argument is required for rename operation")
     
     if args.operation_type == "reg":
-        if not args.name:
-            raise Exception("Name argument is required for reg operation type")
-        if not args.location:
-            raise Exception("Location argument is required for reg operation type")
         if not args.section:
             raise Exception("Section argument is required for reg operation type")
 
