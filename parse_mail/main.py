@@ -35,8 +35,8 @@ class Mailer:
 
             res = self.session.post(self.settings["urls"]["get_conversations"])
             self.mails = json.loads(res.text)
-        except:
-            raise Exception(f"Failed to parse mails")
+        except Exception as err:
+            raise Exception(f"Failed to parse mails", err)
     
     def get_all_extended_mails(self) -> None:
         try:
@@ -68,19 +68,23 @@ class Mailer:
             return None
 
     def print_mail(self, mail, extended_mail):
-        print("-----------------------")
-        print(f"Author: {mail['UniqueSenders']}")
-        print(f"Topic: {mail['ConversationTopic']}")
-        print(f"DateTime: {mail['LastDeliveryTime']}")
-        if not mail["HasAttachments"] or extended_mail == None: 
-            print(f"This mail does not have list of attachments")
-        else: 
-            print(f"List of attachments:")
-            attachments = extended_mail['Attachments']
-            for idx, attachment in enumerate(attachments):
-                print(f"    {idx+1}: {attachment['Name']} - {attachment['ContentType']}")
-        print(f"Preview: {mail['Preview']}")
-        print("-----------------------\n")
+        try:
+            print("-----------------------")
+            print(f"Author: {mail['UniqueSenders']}")
+            print(f"Topic: {mail['ConversationTopic']}")
+            print(f"DateTime: {mail['LastDeliveryTime']}")
+            if not mail["HasAttachments"] or extended_mail == None: 
+                print(f"This mail does not have list of attachments")
+            else: 
+                print(f"List of attachments:")
+                attachments = extended_mail['Attachments']
+                for idx, attachment in enumerate(attachments):
+                    print(f"    {idx+1}: {attachment['Name']} - {attachment['ContentType']}")
+            print(f"Preview: {mail['Preview']}")
+            print("-----------------------\n")
+        except:
+            # Failed to print mail
+            return None
     
     def get_extended_mail(self, mail):
         try:
@@ -102,19 +106,21 @@ class Mailer:
             return None
     
     def is_filtered(self, args, mail, extended_mail=None) -> bool:
-        if args.author != None: 
-            for sender in mail["UniqueSenders"]:
-                if args.author in sender: return True
-        elif args.topic != None: return args.topic in mail["ConversationTopic"]
-        elif args.date != None:
-            date = datetime.strptime(mail["LastDeliveryTime"], "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
-            filter_date = datetime.strptime(args.date, "%d.%m.%Y-%H")
-            if date.date() == filter_date.date() and date.hour == filter_date.hour: return True
-        elif args.body != None:
-            if extended_mail != None: return args.body in extended_mail["UniqueBody"]["Value"]
-            else: return args.body in mail["Preview"]
-            
-        return False
+        try:
+            if args.author != None: 
+                for sender in mail["UniqueSenders"]:
+                    if args.author in sender: return True
+            elif args.topic != None: return args.topic in mail["ConversationTopic"]
+            elif args.date != None:
+                date = datetime.strptime(mail["LastDeliveryTime"], "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
+                filter_date = datetime.strptime(args.date, "%d.%m.%Y-%H")
+                if date.date() == filter_date.date() and date.hour == filter_date.hour: return True
+            elif args.body != None:
+                if extended_mail != None: return args.body in extended_mail["UniqueBody"]["Value"]
+                else: return args.body in mail["Preview"]
+            return False
+        except:
+            return False
 
     def get_mails_with_filter(self, args) -> None:
         self.get_all_mails()
