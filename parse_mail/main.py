@@ -38,35 +38,6 @@ class Mailer:
         except Exception as err:
             raise Exception(f"Failed to parse mails", err)
     
-    def get_all_extended_mails(self) -> None:
-        try:
-            self.session.headers.clear()
-            self.session.headers.update(self.settings["session"])
-        
-            post_data = self.settings["post_req_conversation_by_id"]
-            post_data["Body"]["Conversations"] = []
-
-            for mail in self.mails["Body"]["Conversations"]:
-                add_coversation = {
-                    "__type":"ConversationRequestType:#Exchange",
-                    "ConversationId": {
-                    "__type":
-                    "ItemId:#Exchange",
-                    "Id": mail["ConversationId"]["Id"]
-                    },
-                    "SyncState":""
-                }
-                post_data["Body"]["Conversations"] += [add_coversation]
-            
-            self.session.headers.update({"X-Owa-Urlpostdata": quote(json.dumps(post_data))})
-            self.session.headers.update({"Action": "GetConversationItems"})
-
-            res = self.session.post(self.settings["urls"]["get_conversation_by_id"])
-            self.extended_mails = json.loads(res.text)
-        except Exception as err:
-            print("Failed to load attachments!", err)
-            return None
-
     def print_mail(self, mail, extended_mail):
         try:
             print("-----------------------")
