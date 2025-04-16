@@ -1,21 +1,30 @@
 import telebot
 import sqlite3
-import time
 import base64
-from passlib.hash import bcrypt
+import datetime
+import os
 
-token = '7842649076:AAGplncQ6y17P3X2ojk_Sl_1v7qjT3KL-EE'
-db_name = 'data.db'
+from passlib.hash import bcrypt
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+token = os.getenv("TOKEN")
+db_name = os.getenv("DB_NAME")
+
+print(token)
 
 class Client:
     def __init__(self, user_tuple):
         self.id = user_tuple[0]
-        self.logged_in = user_tuple[5]
-        self.registered = user_tuple[4]
-        self.passwd = user_tuple[2]
         self.chat_id = user_tuple[1]
-
+        self.passwd = user_tuple[2]
         self.response_state = user_tuple[3]
+        self.session_id = user_tuple[4]
+        self.registered = user_tuple[5]
+        self.logged_in = user_tuple[6]
+
 
 class DBManager:
     def __init__(self):
@@ -40,7 +49,7 @@ class DBManager:
         return Client(res)
 
     def create_table(self):
-        self.cursor.execute('DROP TABLE Users')
+        # self.cursor.execute('DROP TABLE Users')
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS Users (
             id INTEGER PRIMARY KEY,
@@ -76,7 +85,7 @@ class DBManager:
         self.conn.commit()
         self.close_conn()
 
-    def update_registered(self, chat_id, session_id):
+    def update_session_id(self, chat_id, session_id):
         self.open_conn()
         self.cursor.execute("UPDATE Users SET session_id = ? WHERE chat_id = ?", (session_id, chat_id))
         self.conn.commit()
@@ -139,7 +148,7 @@ class State:
         if not bcrypt.verify(passwd, user.passwd):
             return False, "Incorrect password. Please, try againg!"
         
-        session_id = self.session_id(chat_id)
+        session_id = self.get_session_id(chat_id)
         self.db.update_session_id(chat_id, session_id)
         self.db.update_logged_in(chat_id, 1)
         return True, "You are successfully logged_in"
@@ -190,7 +199,7 @@ state = State()
 def start_message(msg):
     state.add_user(msg.chat.id)
     user = state.get_user(msg.chat.id)
-    print(user.passwd)
+    print(user.logged_in)
     bot.send_message(msg.chat.id, "Hello, Welcome!")
 
 @bot.message_handler(commands=["register"])
@@ -208,7 +217,7 @@ def register(msg):
 @bot.message_handler(commands=["login"])
 def login(msg):
     state.add_user(msg.chat.id)
-    user = state.get_user()
+    user = state.get_user(msg.chat.id)
 
     if user.logged_in: 
         bot.send_message(msg.chat.id, "You are already logged in")
@@ -228,6 +237,6 @@ def handle_registration(msg):
 def handle_signin(msg):
     res, m = state.login(msg.chat.id, msg.text)
     state.set_response_state(msg.chat.id, "")
-    bot.send_message(msg.chat_id, m)
+    bot.send_message(msg.chat.id, m)
 
 bot.infinity_polling()
