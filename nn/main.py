@@ -4,14 +4,22 @@ import base64
 import datetime
 import os
 
+from PIL import Image
+import io
+
 from passlib.hash import bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
+
+import tensorflow as tf
+import numpy as np
+from keras.preprocessing import image
 
 load_dotenv()
 
 token = os.getenv("TOKEN")
 db_name = os.getenv("DB_NAME")
+model_file = os.getenv("MODEL")
 
 print(token)
 
@@ -31,6 +39,7 @@ class DBManager:
         self.open_conn()      
         self.create_table()
         self.close_conn()
+
         
     def open_conn(self):
         self.conn = sqlite3.connect(db_name)
@@ -107,6 +116,7 @@ class DBManager:
 class State:
     def __init__(self):
         self.db = DBManager()
+        self.model = tf.keras.models.load_model(model_file)
 
     def add_user(self, chat_id):
         if not self.is_user_exists(chat_id):
@@ -121,6 +131,7 @@ class State:
 
     def register(self, chat_id, passwd) -> (bool, str):
         user = self.get_user(chat_id)
+        print(user.registered)
         if user.registered:
             return False, "You are already registered!"
         
@@ -168,27 +179,46 @@ class State:
         
         return None
     
-    def session_expired(self, user):
+    def session_expired(self, user) -> bool:
+        if user.session_id == None:
+            return True
+        
+        encoded = user.session_id
+        print(encoded)
         decoded_bytes = base64.b64decode(encoded)
-        epoch_time = int(decoded_bytes.decode('utf-8'))
-        dt = datetime.datetime.fromtimestamp(epoch_time)
+        epoch_time = decoded_bytes.decode('utf-8')
+        dt = datetime.fromisoformat(epoch_time)
         
         now = datetime.now()
-        if now - datetime.timedelta(hours=1) > dt:
+        if now - timedelta(hours=1) > dt:
             return True
 
         return False
 
     def check_auth(self, chat_id) -> (bool, str):
         user = self.get_user(chat_id)
+
+        if not user.registered:
+            return False, "You are not registered yet!"
         
         if not user.logged_in:
             return False, "You are not logged in!"
         
         if self.session_expired(user):
+            self.update_logged_in(chat_id, 0)
+            self.update_session_id(chat_id, "")
             return False, "Your session has expired. Please, log in again!"
 
         return True, "You are logged in!"
+
+    def predict(self, path):
+        img = image.load_img(path, target_size=(200, 200))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        images = np.vstack([x])
+        classes = self.model.predict(images, batch_size=10)
+        if classes[0]<0.5: return "human"
+        else: return "monkey"
 
 
 bot = telebot.TeleBot(token)
@@ -206,7 +236,8 @@ def start_message(msg):
 def register(msg):
     state.add_user(msg.chat.id)
     user = state.get_user(msg.chat.id)
-
+    
+    print(user.registered)
     if user.registered: 
         bot.send_message(msg.chat.id, "You are already registered!")
         return None
@@ -226,7 +257,42 @@ def login(msg):
     bot.send_message(msg.chat.id, "Please, Enter the password!")
     state.set_response_state(msg.chat.id, "log_passwd_wait")
 
+@bot.message_handler(commands=["predict"])
+def predict(msg):
+    state.add_user(msg.chat.id)
+    user = state.get_user(msg.chat.id)
+        
+    status, m = state.check_auth(msg.chat.id)
+    if not status:
+        bot.send_message(msg.chat.id, m)
+        return None
+ 
+    bot.send_message(msg.chat.id, "Send me the image!")
+    state.set_response_state(msg.chat.id, "waiting_image")
     
+@bot.message_handler(content_types=['photo'], func=lambda msg: state.get_response_state(msg.chat.id) == "waiting_image")
+def handle_prediction(msg):
+    try:
+        f_id = msg.photo[-1].file_id
+        print(f_id)
+        f_info = bot.get_file(f_id)
+        print(f_info.file_path)
+        f_downloaded = bot.download_file(f_info.file_path)
+
+        f_ext = f_info.file_path.split('.')[-1] if '.' in f_info.file_path else 'jpg'
+        print(f_ext)
+        f_name = f"saved/image_{msg.message_id}.{f_ext}"    
+        print(f_name)
+        with open(f_name, "wb") as f:
+            f.write(f_downloaded)
+
+        prediction = state.predict(f_name)
+        bot.send_message(msg.chat.id, prediction)
+        # bot.send_message(msg.chat.id, "Image saved successfully!")
+    except Exception as err:
+        print(err)
+        bot.send_message(msg.chat.id, "Something went wrong with image handling. Try another image.")
+        
 @bot.message_handler(func=lambda msg: state.get_response_state(msg.chat.id) == "reg_passwd_wait")
 def handle_registration(msg):
     bot.send_message(msg.chat.id, "I have received you password! Now You are registered!")

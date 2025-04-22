@@ -1,2 +1,10 @@
 nn/data
+nn/train
+nn/valid
 nn/data.db
+nn/.ipynb_checkpoints
+data.db 
+saved
+test
+*.h5
+*.keras
