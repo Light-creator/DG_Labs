@@ -84,8 +84,8 @@ class Mailer:
             elif args.topic != None: return args.topic in mail["ConversationTopic"]
             elif args.date != None:
                 date = datetime.strptime(mail["LastDeliveryTime"], "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
-                filter_date = datetime.strptime(args.date, "%d.%m.%Y-%H")
-                if date.date() == filter_date.date() and date.hour == filter_date.hour: return True
+                filter_date = datetime.strptime(args.date, "%d.%m.%Y")
+                if date.date() == filter_date.date(): return True
             elif args.body != None:
                 if extended_mail != None: return args.body in extended_mail["UniqueBody"]["Value"]
                 else: return args.body in mail["Preview"]
@@ -107,26 +107,25 @@ class Mailer:
         try:
             self.session.headers.clear()
             self.session.headers.update(self.settings["session"])
-            self.session.headers.update({"Action": "UpdateItem"})
+            self.session.headers.update({"Action": "CreateItem"})
         
             post_data = self.settings["post_send_mail"]
             
-            post_data["Body"]["ItemChanges"][0]["Updates"][0]["Item"]["ToRecipients"] = []
+            post_data["Body"]["Items"][0]["ToRecipients"] = []
             for receiver in args.receivers.split(','):
-                post_data["Body"]["ItemChanges"][0]["Updates"][0]["Item"]["ToRecipients"] += [{
-                  "Name": "",
+                post_data["Body"]["Items"][0]["ToRecipients"] += [{
+                  "__type": "EmailAddress:#Exchange",
                   "EmailAddress": receiver,
+                  "Name": receiver,
                   "RoutingType": "SMTP",
-                  "MailboxType": "Mailbox",
-                  "RelevanceScore": 8,
-                  "SipUri": " "
+                  "MailboxType": "OneOff"
                 }]
 
-            post_data["Body"]["ItemChanges"][0]["Updates"][1]["Item"]["Subject"] = args.topic
-            post_data["Body"]["ItemChanges"][0]["Updates"][2]["Item"]["Body"]["Value"] = f"</p>{args.body}</p>"
+            post_data["Body"]["Items"][0]["Subject"] = args.topic
+            post_data["Body"]["Items"][0]["Body"]["Value"] = f"</p>{args.body}</p>"
             
             res = self.session.post(self.settings["urls"]["send_mail"], json=post_data)
-            print(f"{res} {res.text}")
+            # print(f"{res} {res.text}")
         except Exception as err:
             raise Exception("Failed to send mail", err)
 
@@ -146,7 +145,7 @@ def main() -> None:
     parser.add_argument("settings_file", type=str, help="File with settings (json format)")
     
     parser.add_argument("-t", "--topic", type=str, help="Filter for mail by topic")
-    parser.add_argument("-d", "--date", type=str, help="Filter for mail by date [dd.mm.yyyy-hh]")
+    parser.add_argument("-d", "--date", type=str, help="Filter for mail by date [dd.mm.yyyy]")
     parser.add_argument("-a", "--author", type=str, help="Filter for mail by author")
     parser.add_argument("-b", "--body", type=str, help="Filter for mail by body text")
     parser.add_argument("-r", "--receivers", type=str, help="List of Receivers")
@@ -156,7 +155,7 @@ def main() -> None:
     mailer = Mailer(args.settings_file)
 
 
-    if args.operation == "get" and not args.topic and not args.author and not args.body:
+    if args.operation == "get" and not args.topic and not args.author and not args.body and not args.date:
         raise Exception("Filter parameter should be not None for get operation")
     if args.operation == "send":
         if not args.body:
